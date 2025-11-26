@@ -1,16 +1,16 @@
 /**
  * Safe OpenAI Client Wrapper
- * - Does NOT crash when API key is missing
- * - Provides helper function: safeChatCompletion()
- * - Uses gpt-4o-mini (your chosen model)
+ * - Stable error handling
+ * - Supports fallback models
+ * - Works perfectly with questionGenerator.js
  */
 
 const OpenAI = require("openai");
 
-// Check if OPENAI_API_KEY exists
+// Load API key
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
-// Create client only if key exists
+// Initialize client
 let client = null;
 
 if (OPENAI_KEY) {
@@ -25,37 +25,61 @@ if (OPENAI_KEY) {
 }
 
 /**
- * Safe wrapper for Chat Completions.
- * If API is not configured, returns an error object instead of throwing.
+ * Preferred model list (fallback mechanism)
  */
-async function safeChatCompletion(messages, model = "gpt-4o-mini") {
+const MODEL_PRIORITY = [
+  "gpt-4o-mini",
+  "gpt-4o-mini-chat",
+  "gpt-4o",
+  "gpt-3.5-turbo"
+];
+
+/**
+ * Safe wrapper for Chat Completions
+ */
+async function safeChatCompletion(messages, model = MODEL_PRIORITY[0]) {
   if (!client) {
     return {
       error: true,
-      message:
-        "OpenAI API key is missing. Please set OPENAI_API_KEY in .env.local"
+      message: "OpenAI API key is missing."
     };
   }
 
-  try {
-    const response = await client.chat.completions.create({
-      model,
-      messages
-    });
+  let lastError = null;
 
-    return {
-      error: false,
-      content: response.choices[0].message.content
-    };
-  } catch (err) {
-    console.error("❌ OpenAI Error:", err.message);
+  for (const currentModel of MODEL_PRIORITY) {
+    try {
+      console.log(`🔵 Trying model: ${currentModel}`);
 
-    return {
-      error: true,
-      message: "OpenAI request failed",
-      details: err.message
-    };
+      const response = await client.chat.completions.create({
+        model: currentModel,
+        messages,
+        temperature: 0.8
+      });
+
+      // Defensive check for unexpected OpenAI response format
+      const content =
+        response?.choices?.[0]?.message?.content || null;
+
+      if (!content) {
+        throw new Error("OpenAI response missing content field.");
+      }
+
+      console.log(`🟢 Model succeeded: ${currentModel}`);
+      return { error: false, content };
+
+    } catch (err) {
+      console.error(`❌ Model failed (${currentModel}):`, err.message);
+      lastError = err;
+    }
   }
+
+  // All models failed
+  return {
+    error: true,
+    message: "All OpenAI models failed.",
+    details: lastError?.message || "Unknown error"
+  };
 }
 
 module.exports = {
