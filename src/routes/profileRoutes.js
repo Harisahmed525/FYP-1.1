@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middlewares/authMiddleware");
-const { updateProfile, changePassword } = require("../controllers/authController");
+const { getMe, updateProfile, changePassword } = require("../controllers/authController");
 
 /**
  * @swagger
@@ -12,6 +12,9 @@ const { updateProfile, changePassword } = require("../controllers/authController
 
 // Update Profile
 router.put("/update", authMiddleware, updateProfile);
+
+// Get logged-in user
+router.get("/me", authMiddleware, getMe);
 
 // Change Password
 router.put("/update-password", authMiddleware, changePassword);

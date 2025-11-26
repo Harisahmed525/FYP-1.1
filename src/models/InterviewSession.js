@@ -15,7 +15,13 @@ const interviewSessionSchema = new mongoose.Schema(
       required: true
     },
 
-    // List of Q&A pairs during interview
+    // Total questions generated (7 / 10 / 12)
+    totalQuestions: {
+      type: Number,
+      required: true
+    },
+
+    // All interview Q&A
     questions: [
       {
         question: { type: String, required: true },
@@ -24,42 +30,19 @@ const interviewSessionSchema = new mongoose.Schema(
       }
     ],
 
-    // AI Evaluation Summary
-    aiSummary: { type: String },
-
-    // ----------------------------------------
-    // ANSWER QUALITY SCORES (for Performance UI)
-    // ----------------------------------------
+    // -----------------------------
+    // 🌟 AI EVALUATION RESULTS
+    // -----------------------------
     technicalAccuracy: { type: Number, default: 0 },
     completeness: { type: Number, default: 0 },
     conciseness: { type: Number, default: 0 },
     problemSolving: { type: Number, default: 0 },
 
-    // ----------------------------------------
-    // BODY LANGUAGE SCORES (for Performance UI)
-    // ----------------------------------------
-    eyeContactScore: { type: Number, default: 0 },
-    facialExpressionsScore: { type: Number, default: 0 },
-    handGesturesScore: { type: Number, default: 0 },
-    toneOfVoiceScore: { type: Number, default: 0 },
+    // AI-generated summary for user
+    aiSummary: { type: String, default: "" },
 
-    // OLD TOTAL SCORES (optional summary)
-    technicalScore: { type: Number, default: 0 },
-    bodyLanguageScore: { type: Number, default: 0 },
-
-    // Video stored in Firebase
-    videoUrl: { type: String },
-
-    // Emotion timeline from frontend logs
-    emotionTimeline: [
-      {
-        time: Number,
-        emotion: String,
-        eyeContact: Number,
-        facialExpression: Number,
-        gestures: Number
-      }
-    ]
+    // Mark when interview fully completed & evaluated
+    isCompleted: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

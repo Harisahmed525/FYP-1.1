@@ -1,5 +1,3 @@
-// src/swagger/swagger.js
-
 module.exports = {
   openapi: "3.0.0",
   info: {
@@ -96,19 +94,6 @@ module.exports = {
         }
       },
 
-      EmotionLogRequest: {
-        type: "object",
-        required: ["sessionId", "emotion"],
-        properties: {
-          sessionId: { type: "string" },
-          emotion: { type: "string" },
-          eyeContact: { type: "number" },
-          facialExpression: { type: "number" },
-          gestures: { type: "number" },
-          time: { type: "number" }
-        }
-      },
-
       FinishInterviewRequest: {
         type: "object",
         required: ["sessionId"],
@@ -118,14 +103,12 @@ module.exports = {
       },
 
       // -------------------------
-      // PERFORMANCE SUMMARY SCHEMA
+      // PERFORMANCE SUMMARY (REAL DB VALUES)
       // -------------------------
       PerformanceSummary: {
         type: "object",
         properties: {
           interviewsCompleted: { type: "number" },
-          hoursPracticed: { type: "number" },
-          skillsMastered: { type: "number" },
 
           progressOverTime: {
             type: "array",
@@ -138,35 +121,10 @@ module.exports = {
           answerQuality: {
             type: "object",
             properties: {
-              score: { type: "number" },
               technicalAccuracy: { type: "number" },
               completeness: { type: "number" },
               conciseness: { type: "number" },
               problemSolving: { type: "number" }
-            }
-          },
-
-          bodyLanguage: {
-            type: "object",
-            properties: {
-              score: { type: "number" },
-              eyeContact: { type: "number" },
-              facialExpressions: { type: "number" },
-              handGestures: { type: "number" },
-              toneOfVoice: { type: "number" }
-            }
-          },
-
-          upcomingInterviews: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                date: { type: "string" },
-                time: { type: "string" },
-                status: { type: "string" }
-              }
             }
           }
         }
@@ -175,7 +133,7 @@ module.exports = {
   },
 
   // ---------------------------------------------------------
-  //                    API ENDPOINTS
+  // API ENDPOINTS
   // ---------------------------------------------------------
   paths: {
     // -------------------------
@@ -289,25 +247,13 @@ module.exports = {
     },
 
     // -------------------------
-    // AI
-    // -------------------------
-    "/api/interview/generate-questions": {
-      post: {
-        tags: ["AI"],
-        security: [{ bearerAuth: [] }],
-        summary: "Generate 7 interview questions",
-        responses: { 200: { description: "Questions generated" } }
-      }
-    },
-
-    // -------------------------
     // INTERVIEW SESSION
     // -------------------------
     "/api/interview/start": {
       post: {
         tags: ["InterviewSession"],
         security: [{ bearerAuth: [] }],
-        summary: "Start an interview session",
+        summary: "Start an interview session (generate questions)",
         requestBody: {
           content: {
             "application/json": { schema: { $ref: "#/components/schemas/StartInterviewRequest" } }
@@ -321,7 +267,7 @@ module.exports = {
       post: {
         tags: ["InterviewSession"],
         security: [{ bearerAuth: [] }],
-        summary: "Submit answer → Get next question",
+        summary: "Submit one answer & receive next question",
         requestBody: {
           content: {
             "application/json": { schema: { $ref: "#/components/schemas/AnswerRequest" } }
@@ -331,47 +277,11 @@ module.exports = {
       }
     },
 
-    "/api/interview/emotion-log": {
-      post: {
-        tags: ["InterviewSession"],
-        security: [{ bearerAuth: [] }],
-        summary: "Log facial emotion data from frontend",
-        requestBody: {
-          content: {
-            "application/json": { schema: { $ref: "#/components/schemas/EmotionLogRequest" } }
-          }
-        },
-        responses: { 200: { description: "Emotion logged" } }
-      }
-    },
-
-    "/api/interview/upload-video": {
-      post: {
-        tags: ["InterviewSession"],
-        security: [{ bearerAuth: [] }],
-        summary: "Upload final interview video",
-        requestBody: {
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  video: { type: "string", format: "binary" },
-                  sessionId: { type: "string" }
-                }
-              }
-            }
-          }
-        },
-        responses: { 200: { description: "Video uploaded" } }
-      }
-    },
-
     "/api/interview/finish": {
       post: {
         tags: ["InterviewSession"],
         security: [{ bearerAuth: [] }],
-        summary: "Finish interview & run AI evaluation",
+        summary: "Finish interview and run OpenAI evaluation",
         requestBody: {
           content: {
             "application/json": { schema: { $ref: "#/components/schemas/FinishInterviewRequest" } }
@@ -388,7 +298,7 @@ module.exports = {
       get: {
         tags: ["Performance"],
         security: [{ bearerAuth: [] }],
-        summary: "Get full performance summary (dashboard + performance page)",
+        summary: "Get user's performance summary based on past interviews",
         responses: {
           200: {
             description: "Performance summary returned",
