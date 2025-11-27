@@ -14,14 +14,17 @@ function validatePassword(password) {
 }
 
 // ----------------------------------
-// REGISTER USER
+// REGISTER USER (UPDATED with dob + citizenship)
 // ----------------------------------
 exports.registerUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, dob, citizenship } = req.body || {};
 
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "name, email and password are required" });
+    // Required fields
+    if (!name || !email || !password || !dob || !citizenship)
+      return res.status(400).json({
+        message: "name, email, password, dob and citizenship are required"
+      });
 
     if (!validateEmail(email))
       return res.status(400).json({ message: "Invalid email format" });
@@ -30,14 +33,17 @@ exports.registerUser = async (req, res, next) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
-    if (existing) return res.status(409).json({ message: "User already exists" });
+    if (existing)
+      return res.status(409).json({ message: "User already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      passwordHash
+      passwordHash,
+      dob,
+      citizenship
     });
 
     const token = generateToken(user);
@@ -48,6 +54,8 @@ exports.registerUser = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        dob: user.dob,
+        citizenship: user.citizenship,
         createdAt: user.createdAt,
       },
       token,
@@ -81,6 +89,8 @@ exports.loginUser = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        dob: user.dob,
+        citizenship: user.citizenship,
         createdAt: user.createdAt,
       },
       token,
@@ -105,29 +115,34 @@ exports.getMe = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        dob: user.dob,
+        citizenship: user.citizenship,
         createdAt: user.createdAt,
       },
     });
   } catch (err) {
     next(err);
   }
-};  // <-- THIS WAS MISSING 🔥🔥
-
+};
 
 // ----------------------------------
-// UPDATE PROFILE
+// UPDATE PROFILE (updated to allow dob + citizenship)
 // ----------------------------------
 exports.updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { name, email } = req.body || {};
+    const { name, email, dob, citizenship } = req.body || {};
 
-    if (!name && !email)
+    if (!name && !email && !dob && !citizenship)
       return res.status(400).json({ message: "No fields to update" });
 
     let updateData = {};
 
     if (name) updateData.name = name.trim();
+
+    if (dob) updateData.dob = dob;
+
+    if (citizenship) updateData.citizenship = citizenship;
 
     if (email) {
       if (!validateEmail(email))
@@ -138,7 +153,8 @@ exports.updateProfile = async (req, res, next) => {
         _id: { $ne: userId },
       });
 
-      if (exists) return res.status(409).json({ message: "Email already taken" });
+      if (exists)
+        return res.status(409).json({ message: "Email already taken" });
 
       updateData.email = email.toLowerCase().trim();
     }
@@ -153,6 +169,8 @@ exports.updateProfile = async (req, res, next) => {
         id: updated._id,
         name: updated.name,
         email: updated.email,
+        dob: updated.dob,
+        citizenship: updated.citizenship,
         createdAt: updated.createdAt,
       },
     });
@@ -162,7 +180,7 @@ exports.updateProfile = async (req, res, next) => {
 };
 
 // ----------------------------------
-// CHANGE PASSWORD
+// CHANGE PASSWORD (unchanged)
 // ----------------------------------
 exports.changePassword = async (req, res, next) => {
   try {
@@ -176,7 +194,8 @@ exports.changePassword = async (req, res, next) => {
       return res.status(400).json({ message: "New password must be at least 6 characters" });
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
 
     const match = await bcrypt.compare(oldPassword, user.passwordHash);
     if (!match)

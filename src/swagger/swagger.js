@@ -26,15 +26,18 @@ module.exports = {
       // -------------------------
       // AUTH SCHEMAS
       // -------------------------
-      RegisterRequest: {
-        type: "object",
-        required: ["name", "email", "password"],
-        properties: {
-          name: { type: "string" },
-          email: { type: "string", format: "email" },
-          password: { type: "string", minLength: 6 }
-        }
-      },
+  RegisterRequest: {
+  type: "object",
+  required: ["name", "email", "password", "dob", "citizenship"],
+  properties: {
+    name: { type: "string" },
+    email: { type: "string", format: "email" },
+    password: { type: "string", minLength: 6 },
+    dob: { type: "string", format: "date", example: "2001-07-21" },
+    citizenship: { type: "string", example: "Pakistani" }
+  }
+},
+
 
       LoginRequest: {
         type: "object",
