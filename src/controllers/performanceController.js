@@ -1,70 +1,118 @@
-// performanceController.js
+const InterviewSession = require("../models/InterviewSession");
 
 exports.getPerformanceSummary = async (req, res) => {
   try {
-    const userId = req.user.id; // from auth middleware
+    const userId = req.user.id;
 
-    // ----------------------------------------------
-    // 🚀 For Now: Dummy static values (easy to integrate)
-    // Replace with real DB logic later
-    // ----------------------------------------------
+    // Fetch all completed interviews of this user
+    const sessions = await InterviewSession.find({
+      userId,
+      isCompleted: true
+    }).sort({ createdAt: 1 });
 
+    if (!sessions.length) {
+      return res.json({
+        success: true,
+        summary: {
+          userId,
+          interviewsCompleted: 0,
+          hoursPracticed: 0,
+          skillsMastered: 0,
+          progressOverTime: [],
+          overallScore: 0,
+          improvement: 0,
+          answerQuality: {
+            score: 0,
+            technicalAccuracy: 0,
+            completeness: 0,
+            conciseness: 0,
+            problemSolving: 0
+          },
+          bodyLanguage: {}, // no body language now
+          upcomingInterviews: []
+        }
+      });
+    }
+
+    // TOTAL INTERVIEWS COMPLETED
+    const interviewsCompleted = sessions.length;
+
+    // HOURS PRACTICED (estimate: each mock interview ≈ 10 min)
+    const hoursPracticed = (interviewsCompleted * 10) / 60;
+
+    // AVERAGES ACROSS ALL SESSIONS
+    const avg = field =>
+      Math.round(
+        sessions.reduce((sum, s) => sum + (s[field] || 0), 0) /
+          sessions.length
+      );
+
+    const averageTechnical = avg("technicalAccuracy");
+    const averageComplete = avg("completeness");
+    const averageConcise = avg("conciseness");
+    const averageProblemSolve = avg("problemSolving");
+
+    // OVERALL SCORE (avg of all categories)
+    const overallScore = Math.round(
+      (averageTechnical +
+        averageComplete +
+        averageConcise +
+        averageProblemSolve) /
+        4
+    );
+
+    // PROGRESS TREND (per interview)
+    const progressOverTime = sessions.map(s => {
+      return Math.round(
+        (s.technicalAccuracy +
+          s.completeness +
+          s.conciseness +
+          s.problemSolving) /
+          4
+      );
+    });
+
+    // Improvement = last interview score - first interview score
+    const improvement =
+      progressOverTime[progressOverTime.length - 1] -
+      progressOverTime[0];
+
+    // ESTIMATE SKILLS MASTERED
+    const skillsMastered =
+      averageTechnical > 60
+        ? 10
+        : averageTechnical > 40
+        ? 5
+        : 2;
+
+    // FINAL SUMMARY OBJECT
     const summary = {
       userId,
 
-      // Dashboard top cards
-      interviewsCompleted: 24,
-      hoursPracticed: 48,
-      skillsMastered: 12,
+      interviewsCompleted,
+      hoursPracticed,
+      skillsMastered,
 
-      // Progress over time (weekly scores)
-      progressOverTime: [65, 68, 72, 75, 78, 80],
+      progressOverTime,
+      overallScore,
+      improvement,
 
-      // Interview Statistics
-      overallScore: 82,
-      improvement: 12,
-
-      // Answer Quality
       answerQuality: {
-        score: 85,
-        technicalAccuracy: 90,
-        completeness: 85,
-        conciseness: 80,
-        problemSolving: 85
+        score: overallScore,
+        technicalAccuracy: averageTechnical,
+        completeness: averageComplete,
+        conciseness: averageConcise,
+        problemSolving: averageProblemSolve
       },
 
-      // Body Language
-      bodyLanguage: {
-        score: 76,
-        eyeContact: 85,
-        facialExpressions: 70,
-        handGestures: 75,
-        toneOfVoice: 75
-      },
+      bodyLanguage: {}, // no emotion tracking anymore
 
-      // Upcoming Interviews
-      upcomingInterviews: [
-        {
-          title: "React Performance",
-          date: "2024-05-10",
-          time: "10:00 AM",
-          status: "Ready"
-        },
-        {
-          title: "System Design",
-          date: "2024-05-12",
-          time: "02:00 PM",
-          status: "Ready"
-        }
-      ]
+      upcomingInterviews: [] // optional future feature
     };
 
     return res.json({ success: true, summary });
-
   } catch (error) {
     console.error("Performance summary error:", error);
-    res.status(500).json({
-      message: "Failed to fetch performance summary"
-    });
+    res.status(500).json({ message: "Failed to fetch performance summary" });
   }
 };

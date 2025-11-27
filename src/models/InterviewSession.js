@@ -21,6 +21,13 @@ const interviewSessionSchema = new mongoose.Schema(
       required: true
     },
 
+
+    currentIndex: {
+    type: Number,
+    default: 0
+    },
+
+
     // All interview Q&A
     questions: [
       {

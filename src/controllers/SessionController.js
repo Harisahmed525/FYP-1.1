@@ -63,21 +63,39 @@ exports.sendAnswer = async (req, res, next) => {
     if (!session)
       return res.status(404).json({ message: "Session not found" });
 
+    // Ensure currentIndex exists
+    if (session.currentIndex === undefined || session.currentIndex === null) {
+      session.currentIndex = 0;
+    }
+
     const index = session.currentIndex;
 
-    // Save the current answer
+    // SAFETY: prevent invalid index
+    if (!session.questions[index]) {
+      return res.status(400).json({
+        message: `Invalid question index ${index}. Something went wrong.`
+      });
+    }
+
+    // Save answer
     session.questions[index].answer = answer;
+
+    // Move to next
     session.currentIndex++;
 
-    // If all questions answered
+    // Check if interview is finished
     if (session.currentIndex >= session.totalQuestions) {
       session.isCompleted = true;
       await session.save();
-      return res.json({ done: true, message: "All questions answered" });
+
+      return res.json({
+        done: true,
+        message: "All questions answered"
+      });
     }
 
-    // Send the next question
     const nextQuestion = session.questions[session.currentIndex].question;
+
     await session.save();
 
     return res.json({
